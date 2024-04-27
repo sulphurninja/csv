@@ -1,117 +1,183 @@
-import Image from "next/image";
-import { Inter } from "next/font/google";
+import { useEffect, useState } from 'react';
+import Papa from 'papaparse';
+import { Button } from '@/components/ui/button';
+import Navbar from '@/components/Navbar';
+import { DM_Sans } from 'next/font/google';
 
-const inter = Inter({ subsets: ["latin"] });
+
+const inter = DM_Sans({ subsets: ['latin'] });
 
 export default function Home() {
+  const [data, setData] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/maindata.csv');
+        const reader = response.body.getReader();
+        const result = await reader.read();
+        const decoder = new TextDecoder('utf-8');
+        const csv = decoder.decode(result.value);
+        const parsedData = Papa.parse(csv, { header: true }).data;
+        setData(parsedData);
+      } catch (error) {
+        console.error('Error fetching or parsing CSV file:', error.message);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  console.log(data, 'parsed');
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = data
+    .filter((row) => {
+      if (!searchTerm) return true;
+      return Object.values(row).some((value) =>
+        value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    })
+    .sort((a, b) => {
+      if (!sortConfig) return 0;
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    })
+    .slice(indexOfFirstItem, indexOfLastItem);
+
+  const totalPages = Math.ceil(
+    data.filter((row) => {
+      if (!searchTerm) return true;
+      return Object.values(row).some((value) =>
+        value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }).length / itemsPerPage
+  );
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const handleItemsPerPageChange = (e) => {
+    setItemsPerPage(parseInt(e.target.value));
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
+  const maxScrapedDate = Math.max(
+    ...data
+      .filter((row) => row.scraped_date) // Filter out rows where scraped_date is undefined
+      .map((row) => {
+        const dateParts = row.scraped_date.split('-').map(Number);
+        return new Date(dateParts[2], dateParts[1] - 1, dateParts[0]).getTime();
+      })
+  );
+
+  // Check if the row's scraped_date matches the maximum scraped_date
+  const isLatest = (row) => {
+    if (!row.scraped_date) return false; // Handle cases where scraped_date is undefined
+    const dateParts = row.scraped_date.split('-').map(Number);
+    return new Date(dateParts[2], dateParts[1] - 1, dateParts[0]).getTime() === maxScrapedDate;
+  };
+
   return (
-    <main
-      className={`flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
-    >
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">pages/index.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <main>
+      <Navbar />
+      <div class="absolute top-0 z-[-2] h-screen w-screen bg-white bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]"></div>
+      <div className="container mx-auto mt-12 p-4">
+        <div className='flex mb-4 justify-center'>
+          <h1 className={`${inter.className}  font-bold text-center text-xl px-4 text-black mt-2 -300 rounded-md p-1 w-fit`}>Main Data</h1>
+
         </div>
-      </div>
+        <div className="flex justify-between mb-4">
+          <div>
+            <input
+              type="text"
+              placeholder="Search..."
+              className="border  border-gray-300 rounded-xl px-3 py-2 mr-2 focus:outline-none "
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Button onClick={() => setSearchTerm('')} className="bg-black hover:bg-slate-900 -400  rounded -500 text-white">
+              Clear
+            </Button>
+          </div>
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700/10 after:dark:from-sky-900 after:dark:via-[#0141ff]/40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+          <select
+            className="border border-gray-300 rounded-xl px-3 py-2 ml-2 focus:outline-none focus:border-blue-500"
+            value={itemsPerPage}
+            onChange={handleItemsPerPageChange}
+          >
+            <option value={5}>5 per page</option>
+            <option value={10}>10 per page</option>
+            <option value={20}>20 per page</option>
+            <option value={50}>50 per page</option>
+          </select>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse border border-gray-300">
+            <thead className=''>
+              <tr className="bg-black  -800 text-white">
+                {Object.keys(data[0] || {}).map((header, index) => (
+                  <th
+                    key={index}
+                    className="py-1 text-sm px-4 font-semibold text-left cursor-pointer"
+                    onClick={() => requestSort(header)}
+                  >
+                    {header}
+                  </th>
 
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Discover and deploy boilerplate example Next.js&nbsp;projects.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {currentItems.map((row, rowIndex) => (
+                <tr key={rowIndex} className={isLatest(row) ? 'bg-yellow-200 ' : 'bg-[#FFFEFE]  text-black'}>
+                  {Object.values(row).map((value, valueIndex) => (
+                    <td key={valueIndex} className={`${inter.className} py-1 px-4 text-xs border border-slate-400 `}>
+                      {value}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-4 flex justify-between items-center">
+          <div className="flex gap-4">
+            <Button onClick={() => paginate(1)} disabled={currentPage === 1}>
+              First
+            </Button>
+            <Button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1}>
+              Prev
+            </Button>
+            <Button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages}>
+              Next
+            </Button>
+            <Button onClick={() => paginate(totalPages)} disabled={currentPage === totalPages}>
+              Last
+            </Button>
+          </div>
+          <div>
+            Page{' '}
+            <strong>
+              {currentPage} of {totalPages}
+            </strong>
+          </div>
+        </div>
       </div>
     </main>
   );
