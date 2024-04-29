@@ -1,7 +1,6 @@
 import React from 'react'
 // import { MobileSidebar } from './mobile-sidebar'
 import { cn } from '@/lib/utils'
-import ThemeToggle from '../components/ThemeToggle/theme-toggle'
 import Image from 'next/image'
 import Link from 'next/link'
 // import { DashboardNav } from './dashboard-nav'
