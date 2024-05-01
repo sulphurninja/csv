@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 
             // Open the SQLite database connection
             const db = await open({
-                filename: 'data.db',
+                filename: './data.db',
                 driver: sqlite3.Database,
             });
 
