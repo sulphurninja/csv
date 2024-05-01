@@ -250,7 +250,7 @@ export default function Home() {
                                     </td>
                                     {/* Render Save button */}
                                     <td className='py-1 px-4 text-xs border border-slate-400'>
-                                        <Button className='bg-black hover:shadow-black hover:shadow-md hover:text-black rounded text-sm px-4 py-1 text-white' onClick={() => saveAgentInputs(row["AgentName"], row['Phone Number'], row['Lead'], row['Notes'])}>Save</Button>
+                                        <Button className='bg-black hover:shadow-black hover:shadow-md hover:text-black rounded text-sm px-4 py-1 text-white' onClick={() => saveAgentInputs(row["AgentName"], row['PhoneNumber'], row['Lead'], row['Notes'])}>Save</Button>
                                     </td>
                                 </tr>
                             ))}
