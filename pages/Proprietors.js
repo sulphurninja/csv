@@ -45,29 +45,48 @@ export default function Home() {
     // Pagination logic
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    // Pagination logic
-    const sortedData = data.sort((a, b) => {
-        // If sortConfig is defined, sort based on the configured key
-        if (sortConfig.key !== '') {
-            const aValue = a[sortConfig.key];
-            const bValue = b[sortConfig.key];
-            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-            return 0;
-        } else {
-            // If sortConfig is not defined, sort based on scraped_date
-            const aDate = new Date(a.scraped_date);
-            const bDate = new Date(b.scraped_date);
-            return sortConfig.direction === 'asc' ? aDate - bDate : bDate - aDate;
-        }
-    });
-
-    const currentItems = sortedData
+    const currentItems = data
         .filter(row => {
             if (!searchTerm) return true;
             return Object.values(row).some(value => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()));
         })
+        .sort((a, b) => {
+            // If there is a sorting configuration (based on column header), apply regular sorting
+            if (sortConfig && sortConfig.key) {
+                const aValue = a[sortConfig.key];
+                const bValue = b[sortConfig.key];
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            } else {
+                // Define a custom sorting function to prioritize the latest scraped date
+                const customSort = () => {
+                    // Check if the "scraped_date" exists in both rows
+                    if (a.scraped_date && b.scraped_date) {
+                        // Convert dates to the appropriate format and compare them
+                        const dateA = new Date(a.scraped_date.trim().split('/').reverse().join('-'));
+                        const dateB = new Date(b.scraped_date.trim().split('/').reverse().join('-'));
+                        // Sort in descending order based on dates
+                        return dateB - dateA;
+                    }
+                    // If either of the dates is missing, retain the current order
+                    return 0;
+                };
+
+                // Apply the custom sorting function
+                const customSortResult = customSort();
+
+                // If custom sorting yields a result, return it; otherwise, resort to regular sorting
+                return customSortResult !== 0 ? customSortResult : (
+                    sortConfig && sortConfig.key ?
+                        // If there is a sorting configuration (based on column header), apply regular sorting
+                        (a[sortConfig.key] < b[sortConfig.key] ? -1 : 1) * (sortConfig.direction === 'asc' ? 1 : -1) :
+                        0
+                );
+            }
+        })
         .slice(indexOfFirstItem, indexOfLastItem);
+
 
     const totalPages = Math.ceil(data.length / itemsPerPage);
 
@@ -99,9 +118,9 @@ export default function Home() {
                 lead,
                 notes
             };
-    
+
             console.log('Request Body:', requestBody); // Log the request body
-    
+
             const response = await fetch('/api/saveProprietorInputs', {
                 method: 'POST',
                 headers: {
@@ -118,7 +137,7 @@ export default function Home() {
             console.error('Error saving agent inputs:', error.message);
         }
     };
-    
+
 
 
 

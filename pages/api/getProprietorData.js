@@ -12,7 +12,13 @@ export default async function handler(req, res) {
     });
 
     // Query data from the database
-    const data = await db.all('SELECT * FROM Proprietors');
+    const data = await db.all(`
+      SELECT * 
+      FROM Proprietors 
+      WHERE 
+        scraped_date IS NOT NULL AND scraped_date != "" AND
+        (ProprietorCode IS NOT NULL OR ProprietorName IS NOT NULL OR ProprietorAddress IS NOT NULL)
+    `);
 
     // Close the database connection
     await db.close();

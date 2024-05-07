@@ -79,23 +79,42 @@ export default function Home() {
   };
 
 
-  // Pagination logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = data
-    .filter(row => {
-      if (!searchTerm) return true;
-      return Object.values(row).some(value => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()));
-    })
-    .sort((a, b) => {
-      if (!sortConfig) return 0;
-      const aValue = a[sortConfig.key];
-      const bValue = b[sortConfig.key];
-      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+// Pagination logic
+const indexOfLastItem = currentPage * itemsPerPage;
+const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+const currentItems = data
+  .filter(row => {
+    if (!searchTerm) return true;
+    return Object.values(row).some(value => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()));
+  })
+  .sort((a, b) => {
+    // Define a custom sorting function to prioritize the latest scraped date
+    const customSort = () => {
+      // Check if the "scraped_date" exists in both rows
+      if (a.scraped_date && b.scraped_date) {
+        // Convert dates to the appropriate format and compare them
+        const dateA = new Date(a.scraped_date.trim().split('/').reverse().join('-'));
+        const dateB = new Date(b.scraped_date.trim().split('/').reverse().join('-'));
+        // Sort in descending order based on dates
+        return dateB - dateA;
+      }
+      // If either of the dates is missing, retain the current order
       return 0;
-    })
-    .slice(indexOfFirstItem, indexOfLastItem);
+    };
+
+    // Apply the custom sorting function
+    const customSortResult = customSort();
+
+    // If custom sorting yields a result, return it; otherwise, resort to regular sorting
+    return customSortResult !== 0 ? customSortResult : (
+      sortConfig && sortConfig.key ?
+        // If there is a sorting configuration (based on column header), apply regular sorting
+        (a[sortConfig.key] < b[sortConfig.key] ? -1 : 1) * (sortConfig.direction === 'asc' ? 1 : -1) :
+        0
+    );
+  })
+  .slice(indexOfFirstItem, indexOfLastItem);
+
 
   const totalPages = Math.ceil(data.length / itemsPerPage);
 
@@ -145,20 +164,21 @@ export default function Home() {
   // Function to determine if a row has the latest scraped date
   const isLatestScrapedDate = (row, data) => {
     // Filter out rows with null scraped_date or where scraped_date is not defined
-    const validDates = data.filter(item => item.scraped_date && item.scraped_date !== null);
+    const validDates = data.filter(item => item.scraped_date && item.scraped_date.trim() !== '');
 
     // If there are no valid dates, return false
     if (validDates.length === 0) return false;
 
     // Find the maximum date among valid dates
-    const maxDate = Math.max(...validDates.map(item => new Date(item.scraped_date.split('/').reverse().join('-')).getTime()));
+    const maxDate = Math.max(...validDates.map(item => new Date(item.scraped_date.trim().split('/').reverse().join('-')).getTime()));
 
     // If row's scraped_date is not defined or null, return false
-    if (!row.scraped_date || row.scraped_date === null) return false;
+    if (!row.scraped_date || row.scraped_date.trim() === '') return false;
 
     // Convert the row's scraped_date to Date and compare with maxDate
-    return new Date(row.scraped_date.split('/').reverse().join('-')).getTime() === maxDate;
-  };
+    return new Date(row.scraped_date.trim().split('/').reverse().join('-')).getTime() === maxDate;
+};
+
 
 
 

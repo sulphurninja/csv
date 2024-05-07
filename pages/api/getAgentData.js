@@ -12,8 +12,13 @@ export default async function handler(req, res) {
     });
 
     // Query data from the database
-    const data = await db.all('SELECT * FROM Agents');
-
+    const data = await db.all(`
+      SELECT * 
+      FROM Agents 
+      WHERE 
+        scraped_date IS NOT NULL AND scraped_date != "" AND
+        (AgentCode IS NOT NULL OR AgentName IS NOT NULL OR AgentAddress IS NOT NULL)
+    `);
     // Close the database connection
     await db.close();
 
