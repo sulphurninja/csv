@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar';
 import { DM_Sans } from 'next/font/google';
 import Papa from 'papaparse'
 import Pagination from '@/components/Pagination';
+import { Toaster, toast } from 'sonner';
 
 const inter = DM_Sans({ subsets: ['latin'] });
 
@@ -58,7 +59,7 @@ export default function Home() {
           });
           if (response.ok) {
             console.log('Entries appended to the database successfully.');
-
+            toast.success("Entries appended")
             // Call the API endpoint to update the Agents table
             await fetch('/api/updateAgents', {
               method: 'POST', // Specify the method as POST
@@ -79,41 +80,41 @@ export default function Home() {
   };
 
 
-// Pagination logic
-const indexOfLastItem = currentPage * itemsPerPage;
-const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-const currentItems = data
-  .filter(row => {
-    if (!searchTerm) return true;
-    return Object.values(row).some(value => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()));
-  })
-  .sort((a, b) => {
-    // Define a custom sorting function to prioritize the latest scraped date
-    const customSort = () => {
-      // Check if the "scraped_date" exists in both rows
-      if (a.scraped_date && b.scraped_date) {
-        // Convert dates to the appropriate format and compare them
-        const dateA = new Date(a.scraped_date.trim().split('/').reverse().join('-'));
-        const dateB = new Date(b.scraped_date.trim().split('/').reverse().join('-'));
-        // Sort in descending order based on dates
-        return dateB - dateA;
-      }
-      // If either of the dates is missing, retain the current order
-      return 0;
-    };
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = data
+    .filter(row => {
+      if (!searchTerm) return true;
+      return Object.values(row).some(value => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()));
+    })
+    .sort((a, b) => {
+      // Define a custom sorting function to prioritize the latest scraped date
+      const customSort = () => {
+        // Check if the "scraped_date" exists in both rows
+        if (a.scraped_date && b.scraped_date) {
+          // Convert dates to the appropriate format and compare them
+          const dateA = new Date(a.scraped_date.trim().split('/').reverse().join('-'));
+          const dateB = new Date(b.scraped_date.trim().split('/').reverse().join('-'));
+          // Sort in descending order based on dates
+          return dateB - dateA;
+        }
+        // If either of the dates is missing, retain the current order
+        return 0;
+      };
 
-    // Apply the custom sorting function
-    const customSortResult = customSort();
+      // Apply the custom sorting function
+      const customSortResult = customSort();
 
-    // If custom sorting yields a result, return it; otherwise, resort to regular sorting
-    return customSortResult !== 0 ? customSortResult : (
-      sortConfig && sortConfig.key ?
-        // If there is a sorting configuration (based on column header), apply regular sorting
-        (a[sortConfig.key] < b[sortConfig.key] ? -1 : 1) * (sortConfig.direction === 'asc' ? 1 : -1) :
-        0
-    );
-  })
-  .slice(indexOfFirstItem, indexOfLastItem);
+      // If custom sorting yields a result, return it; otherwise, resort to regular sorting
+      return customSortResult !== 0 ? customSortResult : (
+        sortConfig && sortConfig.key ?
+          // If there is a sorting configuration (based on column header), apply regular sorting
+          (a[sortConfig.key] < b[sortConfig.key] ? -1 : 1) * (sortConfig.direction === 'asc' ? 1 : -1) :
+          0
+      );
+    })
+    .slice(indexOfFirstItem, indexOfLastItem);
 
 
   const totalPages = Math.ceil(data.length / itemsPerPage);
@@ -161,24 +162,30 @@ const currentItems = data
     }
   };
 
-  // Function to determine if a row has the latest scraped date
   const isLatestScrapedDate = (row, data) => {
-    // Filter out rows with null scraped_date or where scraped_date is not defined
+    // Filter out rows with null or undefined scraped_date
     const validDates = data.filter(item => item.scraped_date && item.scraped_date.trim() !== '');
-
+  
     // If there are no valid dates, return false
     if (validDates.length === 0) return false;
-
+  
+    // Convert scraped_date to Date objects for comparison
+    const scrapedDates = validDates.map(item => {
+      const [day, month, year] = item.scraped_date.trim().split('/');
+      return new Date(`${month}/${day}/${year}`);
+    });
+  
     // Find the maximum date among valid dates
-    const maxDate = Math.max(...validDates.map(item => new Date(item.scraped_date.trim().split('/').reverse().join('-')).getTime()));
-
-    // If row's scraped_date is not defined or null, return false
-    if (!row.scraped_date || row.scraped_date.trim() === '') return false;
-
+    const maxDate = new Date(Math.max(...scrapedDates.map(date => date.getTime())));
+  
     // Convert the row's scraped_date to Date and compare with maxDate
-    return new Date(row.scraped_date.trim().split('/').reverse().join('-')).getTime() === maxDate;
-};
-
+    const [day, month, year] = row.scraped_date.trim().split('/');
+    const rowDate = new Date(`${month}/${day}/${year}`);
+  
+    // Return true if the row's date matches the maxDate
+    return rowDate.getTime() === maxDate.getTime();
+  };
+  
 
 
 
@@ -186,6 +193,7 @@ const currentItems = data
   return (
     <main>
       <Navbar />
+      <Toaster />
       <div class="absolute top-0 z-[-2] h-screen w-screen bg-white bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]"></div>
       <div className="container mx-auto mt-12 p-4">
         <div className='flex mb-4 justify-center'>
@@ -242,14 +250,15 @@ const currentItems = data
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse border border-gray-300">
-            <thead className="">
+        <div className="text-xs">
+          <table className="w-full overflow-x-scroll border-collapse border border-gray-300">
+            <thead className="overflow-x-scroll">
               <tr className="bg-black -800 text-white">
+                <th className="py-1 text-sm px-4  font-semibold text-left">Sr.no</th>
                 {Object.keys(data[0] || {}).map((header, index) => (
                   <th
                     key={index}
-                    className="py-1 text-sm px-4 font-semibold text-left cursor-pointer"
+                    className="py-1 text-xs  font-semibold text-left cursor-pointer"
                     onClick={() => requestSort(header)}
                   >
                     {header}
@@ -260,11 +269,15 @@ const currentItems = data
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className='overflow-x-scroll'>
+              {/* Table Body */}
               {currentItems.map((row, rowIndex) => (
-                <tr key={rowIndex} className={`text-black ${isLatestScrapedDate(row, data) ? 'bg-yellow-200' : 'bg-[#FFFEFE]'}`}>
+                <tr  key={rowIndex} className={`text-black ${isLatestScrapedDate(row, data) ? 'bg-yellow-200 overflow-x-scroll' : 'bg-[#FFFEFE] overflow-x-scroll'}`}>
+                  {/* Serial Number Cell */}
+                  <td className={`${inter.className}  py-1  text-xs border border-slate-400`}>{indexOfFirstItem + rowIndex + 1}</td>
+                  {/* Existing Table Cells */}
                   {Object.values(row).map((value, valueIndex) => (
-                    <td key={valueIndex} className={`${inter.className} py-1 px-4 text-xs border border-slate-400`}>
+                    <td key={valueIndex} className={`${inter.className} py-1 px-2 text-xs border border-slate-400`}>
                       {value && value.toString()} {/* Ensure value is not null or undefined before calling toString() */}
                     </td>
                   ))}

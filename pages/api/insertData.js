@@ -3,6 +3,13 @@
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 
+export const config = {
+    api: {
+        bodyParser: {
+            sizeLimit: '20mb' // Set desired value here
+        }
+    }
+}
 export default async function handler(req, res) {
     if (req.method === 'POST') {
         const { newEntries } = req.body;
