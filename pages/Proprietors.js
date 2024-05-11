@@ -143,24 +143,38 @@ export default function Home() {
 
 
 
-    // Function to determine if a row has the latest scraped date
     const isLatestScrapedDate = (row, data) => {
-        // Filter out rows with null scraped_date or where scraped_date is not defined
-        const validDates = data.filter(item => item.scraped_date && item.scraped_date !== null);
+        // Filter out rows with null or undefined scraped_date and invalid formats
+        const validDates = data.filter(item => {
+            const dateParts = item.scraped_date && item.scraped_date.trim().split('/');
+            // Check if dateParts has the correct length and format
+            return dateParts && dateParts.length === 3 && /^\d{2}\/\d{2}\/\d{4}$/.test(item.scraped_date.trim());
+        });
 
         // If there are no valid dates, return false
         if (validDates.length === 0) return false;
 
+        // Convert scraped_date to Date objects for comparison
+        const scrapedDates = validDates.map(item => {
+            const [day, month, year] = item.scraped_date.trim().split('/');
+            return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+        });
+
         // Find the maximum date among valid dates
-        const maxDate = Math.max(...validDates.map(item => new Date(item.scraped_date.split('/').reverse().join('-')).getTime()));
+        const maxDate = new Date(Math.max(...scrapedDates.map(date => date.getTime())));
 
-        // If row's scraped_date is not defined or null, return false
-        if (!row.scraped_date || row.scraped_date === null) return false;
+        // Parse the row's scraped_date to Date and compare with maxDate
+        const dateParts = row.scraped_date && row.scraped_date.trim().split('/');
+        if (dateParts && dateParts.length === 3 && /^\d{2}\/\d{2}\/\d{4}$/.test(row.scraped_date.trim())) {
+            const [day, month, year] = dateParts;
+            const rowDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
 
-        // Convert the row's scraped_date to Date and compare with maxDate
-        return new Date(row.scraped_date.split('/').reverse().join('-')).getTime() === maxDate;
+            // Return true if the row's date matches the maxDate
+            return rowDate.getTime() === maxDate.getTime();
+        }
+
+        return false;
     };
-
 
     const downloadCSV = () => {
         const csvContent = Papa.unparse(data);
@@ -223,6 +237,8 @@ export default function Home() {
 
                         <thead className="">
                             <tr className="bg-black -800 text-white">
+                                <th className="py-1 text-sm px-4  font-semibold text-left">Sr.no</th>
+
                                 {Object.keys(data[0] || {}).map((header, index) => (
                                     <th
                                         key={index}
@@ -245,6 +261,7 @@ export default function Home() {
                             {currentItems.map((row, rowIndex) => (
                                 <tr key={rowIndex} className={`text-black border border-gray-300  ${isLatestScrapedDate(row, data) ? 'bg-yellow-200' : 'bg-[#FFFEFE]'}`}>
                                     {/* Render Agent Name and Address */}
+                                    <td className={`${inter.className}  py-1  text-xs border border-slate-400`}>{indexOfFirstItem + rowIndex + 1}</td>
                                     <td className='py-1 px-4 text-xs border border-slate-400'>{row["ProprietorCode"]}</td>
                                     <td className='py-1 px-4 text-xs border border-slate-400'>{row["ProprietorName"]}</td>
                                     <td className='py-1 px-4 text-xs border border-slate-400'>{row["ProprietorAddress"]}</td>

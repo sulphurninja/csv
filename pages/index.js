@@ -163,32 +163,38 @@ export default function Home() {
   };
 
   const isLatestScrapedDate = (row, data) => {
-    // Filter out rows with null or undefined scraped_date
-    const validDates = data.filter(item => item.scraped_date && item.scraped_date.trim() !== '');
-  
+    // Filter out rows with null or undefined scraped_date and invalid formats
+    const validDates = data.filter(item => {
+      const dateParts = item.scraped_date && item.scraped_date.trim().split('/');
+      // Check if dateParts has the correct length and format
+      return dateParts && dateParts.length === 3 && /^\d{2}\/\d{2}\/\d{4}$/.test(item.scraped_date.trim());
+    });
+    
     // If there are no valid dates, return false
     if (validDates.length === 0) return false;
-  
+    
     // Convert scraped_date to Date objects for comparison
     const scrapedDates = validDates.map(item => {
       const [day, month, year] = item.scraped_date.trim().split('/');
-      return new Date(`${month}/${day}/${year}`);
+      return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
     });
-  
+    
     // Find the maximum date among valid dates
     const maxDate = new Date(Math.max(...scrapedDates.map(date => date.getTime())));
-  
-    // Convert the row's scraped_date to Date and compare with maxDate
-    const [day, month, year] = row.scraped_date.trim().split('/');
-    const rowDate = new Date(`${month}/${day}/${year}`);
-  
-    // Return true if the row's date matches the maxDate
-    return rowDate.getTime() === maxDate.getTime();
+    
+    // Parse the row's scraped_date to Date and compare with maxDate
+    const dateParts = row.scraped_date && row.scraped_date.trim().split('/');
+    if (dateParts && dateParts.length === 3 && /^\d{2}\/\d{2}\/\d{4}$/.test(row.scraped_date.trim())) {
+      const [day, month, year] = dateParts;
+      const rowDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+    
+      // Return true if the row's date matches the maxDate
+      return rowDate.getTime() === maxDate.getTime();
+    }
+    
+    return false;
   };
   
-
-
-
 
   return (
     <main>
