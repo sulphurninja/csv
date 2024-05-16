@@ -6,6 +6,14 @@ import Papa from 'papaparse';
 import fs from 'fs';
 import path from 'path';
 
+export const config = {
+  api: {
+      bodyParser: {
+          sizeLimit: '20mb' // Set desired value here
+      }
+  }
+}
+
 export default async function handler(req, res) {
   try {
     // Open SQLite database
@@ -15,7 +23,7 @@ export default async function handler(req, res) {
     });
 
     // Path to the CSV file
-    const csvFilePath = path.join(process.cwd(), 'public', 'maindata.csv');
+    const csvFilePath = path.join(process.cwd(), 'public', 'wow.csv');
 
     // Read CSV file
     const csvData = fs.readFileSync(csvFilePath, 'utf-8');
