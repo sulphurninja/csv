@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar';
 import { DM_Sans } from 'next/font/google';
-import Papa from 'papaparse'
+import Papa from 'papaparse';
 import Pagination from '@/components/Pagination';
 import { Toaster, toast } from 'sonner';
 
@@ -21,7 +21,7 @@ export default function Home() {
       try {
         const response = await fetch('/api/getData');
         const jsonData = await response.json();
-        setData(jsonData);
+        setData(Array.isArray(jsonData) ? jsonData : []);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -83,7 +83,7 @@ export default function Home() {
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = data
+  const currentItems = Array.isArray(data) ? data
     .filter(row => {
       if (!searchTerm) return true;
       return Object.values(row).some(value => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()));
@@ -114,7 +114,7 @@ export default function Home() {
           0
       );
     })
-    .slice(indexOfFirstItem, indexOfLastItem);
+    .slice(indexOfFirstItem, indexOfLastItem) : [];
 
 
   const totalPages = Math.ceil(data.length / itemsPerPage);
@@ -194,13 +194,13 @@ export default function Home() {
     
     return false;
   };
-  
+
 
   return (
     <main>
       <Navbar />
       <Toaster />
-      <div class="absolute top-0 z-[-2] h-screen w-screen bg-white bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]"></div>
+      <div className="absolute top-0 z-[-2] h-screen w-screen bg-white bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]"></div>
       <div className="container mx-auto mt-12 p-4">
         <div className='flex mb-4 justify-center'>
           <h1 className={`${inter.className}  font-bold text-center text-xl px-4 text-black mt-2 -300 rounded-md p-1 w-fit`}>Main Data ({data.length})</h1>
