@@ -42,6 +42,14 @@ export default function Home() {
     };
 
 
+    const parseDate = (dateString) => {
+        const [day, month, year] = dateString.includes('/')
+            ? dateString.split('/')
+            : dateString.split('-');
+        return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+    };
+
+
     // Pagination logic
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -51,41 +59,63 @@ export default function Home() {
             return Object.values(row).some(value => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()));
         })
         .sort((a, b) => {
-            // If there is a sorting configuration (based on column header), apply regular sorting
-            if (sortConfig && sortConfig.key) {
-                const aValue = a[sortConfig.key];
-                const bValue = b[sortConfig.key];
-                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+            // Define a custom sorting function to prioritize the latest scraped date
+            const customSort = () => {
+                // Check if the "scraped_date" exists in both rows
+                if (a.scraped_date && b.scraped_date) {
+                    // Convert dates to the appropriate format and compare them
+                    const dateA = parseDate(a.scraped_date);
+                    const dateB = parseDate(b.scraped_date);
+                    // Sort in descending order based on dates
+                    return dateB - dateA;
+                }
+                // If either of the dates is missing, retain the current order
                 return 0;
-            } else {
-                // Define a custom sorting function to prioritize the latest scraped date
-                const customSort = () => {
-                    // Check if the "scraped_date" exists in both rows
-                    if (a.scraped_date && b.scraped_date) {
-                        // Convert dates to the appropriate format and compare them
-                        const dateA = new Date(a.scraped_date.trim().split('/').reverse().join('-'));
-                        const dateB = new Date(b.scraped_date.trim().split('/').reverse().join('-'));
-                        // Sort in descending order based on dates
-                        return dateB - dateA;
-                    }
-                    // If either of the dates is missing, retain the current order
-                    return 0;
-                };
+            };
 
-                // Apply the custom sorting function
-                const customSortResult = customSort();
+            // Apply the custom sorting function
+            const customSortResult = customSort();
 
-                // If custom sorting yields a result, return it; otherwise, resort to regular sorting
-                return customSortResult !== 0 ? customSortResult : (
-                    sortConfig && sortConfig.key ?
-                        // If there is a sorting configuration (based on column header), apply regular sorting
-                        (a[sortConfig.key] < b[sortConfig.key] ? -1 : 1) * (sortConfig.direction === 'asc' ? 1 : -1) :
-                        0
-                );
-            }
+            // If custom sorting yields a result, return it; otherwise, resort to regular sorting
+            return customSortResult !== 0 ? customSortResult : (
+                sortConfig && sortConfig.key ?
+                    // If there is a sorting configuration (based on column header), apply regular sorting
+                    (a[sortConfig.key] < b[sortConfig.key] ? -1 : 1) * (sortConfig.direction === 'asc' ? 1 : -1) :
+                    0
+            );
         })
         .slice(indexOfFirstItem, indexOfLastItem);
+
+
+        const isLatestScrapedDate = (row, data) => {
+            // Filter out rows with null or undefined scraped_date and invalid formats
+            const validDates = data.filter(item => {
+                const dateParts = item.scraped_date && item.scraped_date.trim().split(/[/\-]/);
+                // Check if dateParts has the correct length and format
+                return dateParts && dateParts.length === 3 && /^\d{2}[\/-]\d{2}[\/-]\d{4}$/.test(item.scraped_date.trim());
+            });
+    
+            // If there are no valid dates, return false
+            if (validDates.length === 0) return false;
+    
+            // Convert scraped_date to Date objects for comparison
+            const scrapedDates = validDates.map(item => parseDate(item.scraped_date));
+    
+            // Find the maximum date among valid dates
+            const maxDate = new Date(Math.max(...scrapedDates.map(date => date.getTime())));
+    
+            // Parse the row's scraped_date to Date and compare with maxDate
+            const dateParts = row.scraped_date && row.scraped_date.trim().split(/[/\-]/);
+            if (dateParts && dateParts.length === 3 && /^\d{2}[\/-]\d{2}[\/-]\d{4}$/.test(row.scraped_date.trim())) {
+                const rowDate = parseDate(row.scraped_date);
+    
+                // Return true if the row's date matches the maxDate
+                return rowDate.getTime() === maxDate.getTime();
+            }
+    
+            return false;
+        };
+    
 
 
     const totalPages = Math.ceil(data.length / itemsPerPage);
@@ -138,43 +168,6 @@ export default function Home() {
         }
     };
 
-
-
-
-
-
-    const isLatestScrapedDate = (row, data) => {
-        // Filter out rows with null or undefined scraped_date and invalid formats
-        const validDates = data.filter(item => {
-            const dateParts = item.scraped_date && item.scraped_date.trim().split('/');
-            // Check if dateParts has the correct length and format
-            return dateParts && dateParts.length === 3 && /^\d{2}\/\d{2}\/\d{4}$/.test(item.scraped_date.trim());
-        });
-
-        // If there are no valid dates, return false
-        if (validDates.length === 0) return false;
-
-        // Convert scraped_date to Date objects for comparison
-        const scrapedDates = validDates.map(item => {
-            const [day, month, year] = item.scraped_date.trim().split('/');
-            return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
-        });
-
-        // Find the maximum date among valid dates
-        const maxDate = new Date(Math.max(...scrapedDates.map(date => date.getTime())));
-
-        // Parse the row's scraped_date to Date and compare with maxDate
-        const dateParts = row.scraped_date && row.scraped_date.trim().split('/');
-        if (dateParts && dateParts.length === 3 && /^\d{2}\/\d{2}\/\d{4}$/.test(row.scraped_date.trim())) {
-            const [day, month, year] = dateParts;
-            const rowDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
-
-            // Return true if the row's date matches the maxDate
-            return rowDate.getTime() === maxDate.getTime();
-        }
-
-        return false;
-    };
 
     const downloadCSV = () => {
         const csvContent = Papa.unparse(data);
