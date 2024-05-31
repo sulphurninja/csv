@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar';
 import { DM_Sans } from 'next/font/google';
 import Papa from 'papaparse'
 import Pagination from '@/components/Pagination';
+import { toast, Toaster } from 'sonner';
 
 const inter = DM_Sans({ subsets: ['latin'] });
 
@@ -118,6 +119,8 @@ export default function Home() {
             });
             if (response.ok) {
                 console.log('Agent inputs saved successfully.');
+                toast.success("Inputs added!");
+
             } else {
                 console.error('Failed to save agent inputs.');
             }
@@ -130,7 +133,7 @@ export default function Home() {
 
 
 
-    
+
     const isLatestScrapedDate = (row, data) => {
         // Filter out rows with null or undefined scraped_date and invalid formats
         const validDates = data.filter(item => {
@@ -179,6 +182,7 @@ export default function Home() {
     return (
         <main>
             <Navbar />
+            <Toaster />
             <div class="absolute top-0 z-[-2] h-screen w-screen bg-white bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]"></div>
             <div className="container mx-auto mt-12 p-4">
                 <div className='flex mb-4 justify-center'>
@@ -254,8 +258,6 @@ export default function Home() {
 
                                     <td className='py-1 px-4 text-xs border border-slate-400'>{row["AgentName"]}</td>
                                     <td className='py-1 px-4 text-xs border border-slate-400'>{row["AgentAddress"]}</td>
-                                    <td className='py-1 px-4 text-xs border border-slate-400'>{row["scraped_date"]}</td>
-                                    {/* Render input fields for PhoneNumber, Lead, and Notes */}
                                     <td className='py-1 px-4 text-xs border border-slate-400'>
                                         <input
                                             type="text"
@@ -283,6 +285,9 @@ export default function Home() {
                                             className="border border-gray-300 rounded px-2 py-1 focus:outline-none"
                                         />
                                     </td>
+                                    <td className='py-1 px-4 text-xs border border-slate-400'>{row["scraped_date"]}</td>
+                                    {/* Render input fields for PhoneNumber, Lead, and Notes */}
+
                                     {/* Render Save button */}
                                     <td className='py-1 px-4 text-xs border border-slate-400'>
                                         <Button className='bg-black hover:shadow-black hover:shadow-md hover:text-black rounded text-sm px-4 py-1 text-white' onClick={() => saveAgentInputs(row["AgentName"], row['PhoneNumber'], row['Lead'], row['Notes'])}>Save</Button>

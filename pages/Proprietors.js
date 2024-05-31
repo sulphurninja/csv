@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar';
 import { DM_Sans } from 'next/font/google';
 import Papa from 'papaparse'
 import Pagination from '@/components/Pagination';
+import { Toaster, toast } from 'sonner';
 
 const inter = DM_Sans({ subsets: ['latin'] });
 
@@ -87,35 +88,35 @@ export default function Home() {
         .slice(indexOfFirstItem, indexOfLastItem);
 
 
-        const isLatestScrapedDate = (row, data) => {
-            // Filter out rows with null or undefined scraped_date and invalid formats
-            const validDates = data.filter(item => {
-                const dateParts = item.scraped_date && item.scraped_date.trim().split(/[/\-]/);
-                // Check if dateParts has the correct length and format
-                return dateParts && dateParts.length === 3 && /^\d{2}[\/-]\d{2}[\/-]\d{4}$/.test(item.scraped_date.trim());
-            });
-    
-            // If there are no valid dates, return false
-            if (validDates.length === 0) return false;
-    
-            // Convert scraped_date to Date objects for comparison
-            const scrapedDates = validDates.map(item => parseDate(item.scraped_date));
-    
-            // Find the maximum date among valid dates
-            const maxDate = new Date(Math.max(...scrapedDates.map(date => date.getTime())));
-    
-            // Parse the row's scraped_date to Date and compare with maxDate
-            const dateParts = row.scraped_date && row.scraped_date.trim().split(/[/\-]/);
-            if (dateParts && dateParts.length === 3 && /^\d{2}[\/-]\d{2}[\/-]\d{4}$/.test(row.scraped_date.trim())) {
-                const rowDate = parseDate(row.scraped_date);
-    
-                // Return true if the row's date matches the maxDate
-                return rowDate.getTime() === maxDate.getTime();
-            }
-    
-            return false;
-        };
-    
+    const isLatestScrapedDate = (row, data) => {
+        // Filter out rows with null or undefined scraped_date and invalid formats
+        const validDates = data.filter(item => {
+            const dateParts = item.scraped_date && item.scraped_date.trim().split(/[/\-]/);
+            // Check if dateParts has the correct length and format
+            return dateParts && dateParts.length === 3 && /^\d{2}[\/-]\d{2}[\/-]\d{4}$/.test(item.scraped_date.trim());
+        });
+
+        // If there are no valid dates, return false
+        if (validDates.length === 0) return false;
+
+        // Convert scraped_date to Date objects for comparison
+        const scrapedDates = validDates.map(item => parseDate(item.scraped_date));
+
+        // Find the maximum date among valid dates
+        const maxDate = new Date(Math.max(...scrapedDates.map(date => date.getTime())));
+
+        // Parse the row's scraped_date to Date and compare with maxDate
+        const dateParts = row.scraped_date && row.scraped_date.trim().split(/[/\-]/);
+        if (dateParts && dateParts.length === 3 && /^\d{2}[\/-]\d{2}[\/-]\d{4}$/.test(row.scraped_date.trim())) {
+            const rowDate = parseDate(row.scraped_date);
+
+            // Return true if the row's date matches the maxDate
+            return rowDate.getTime() === maxDate.getTime();
+        }
+
+        return false;
+    };
+
 
 
     const totalPages = Math.ceil(data.length / itemsPerPage);
@@ -160,6 +161,7 @@ export default function Home() {
             });
             if (response.ok) {
                 console.log('Proprietor inputs saved successfully.');
+                toast.success("Inputs added!");
             } else {
                 console.error('Failed to save proprietor inputs.');
             }
@@ -184,6 +186,7 @@ export default function Home() {
 
     return (
         <main>
+            <Toaster />
             <Navbar />
             <div class="absolute top-0 z-[-2] h-screen w-screen bg-white bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]"></div>
             <div className="container mx-auto mt-12 p-4">
@@ -258,8 +261,6 @@ export default function Home() {
                                     <td className='py-1 px-4 text-xs border border-slate-400'>{row["ProprietorCode"]}</td>
                                     <td className='py-1 px-4 text-xs border border-slate-400'>{row["ProprietorName"]}</td>
                                     <td className='py-1 px-4 text-xs border border-slate-400'>{row["ProprietorAddress"]}</td>
-                                    <td className='py-1 px-4 text-xs border border-slate-400'>{row["scraped_date"]}</td>
-                                    {/* Render input fields for PhoneNumber, Lead, and Notes */}
                                     <td className='py-1 px-4 text-xs border border-slate-400'>
                                         <input
                                             type="text"
@@ -288,6 +289,9 @@ export default function Home() {
                                             className="border border-gray-300 rounded px-2 py-1 focus:outline-none"
                                         />
                                     </td>
+                                    <td className='py-1 px-4 text-xs border border-slate-400'>{row["scraped_date"]}</td>
+                                    {/* Render input fields for PhoneNumber, Lead, and Notes */}
+
                                     {/* Render Save button */}
                                     <td className='py-1 px-4 text-xs border border-slate-400'>
                                         <Button className='bg-black hover:shadow-black hover:shadow-md hover:text-black  rounded text-sm px-4 py-1 text-white' onClick={() => saveProprietorInputs(row["ProprietorName"], row['PhoneNumber'], row['Lead'], row['Notes'])}>Save</Button>
